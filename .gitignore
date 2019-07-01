@@ -1,0 +1,19 @@
+#
+# OSX
+#
+.DS_Store
+
+#
+# Java
+#
+*.class
+
+## Log file
+*.log
+
+
+# Eclipse Core
+.project
+
+# JDT-specific (Eclipse Java Development Tools)
+.classpath

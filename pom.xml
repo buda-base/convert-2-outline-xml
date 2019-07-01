@@ -1,0 +1,32 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.bdrc</groupId>
+  <artifactId>convert-2-outline-xml</artifactId>
+  <packaging>jar</packaging>
+  <version>1.6.0</version>
+  <name>convert-2-outline-xml</name>
+  <url>http://github.com/buda-base/convert-2-outline-xml</url>
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Code Ferret</name>
+      <email>christomlinson@tbrc.org</email>
+      <organization>Buddhist Digital Resource Center</organization>
+      <organizationUrl>https://tbrc.org</organizationUrl>
+    </developer>
+  </developers>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
