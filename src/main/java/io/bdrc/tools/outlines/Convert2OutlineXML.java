@@ -76,7 +76,7 @@ public class Convert2OutlineXML {
 					   sb.append("' work='"); sb.append(wRid); sb.append("'>"); 
 					   sb.append(title); sb.append("</o:isOutlineOf>\r");
 		
-		sb.append("  <o:creator type='hasScribe'>"); sb.append(who); sb.append(" via TBRC Convert2Outline version: "); sb.append(VERSION); sb.append("</o:creator>\r");
+		sb.append("  <o:creator type='hasScribe'>"); sb.append(who); sb.append(" via TBRC Convert2OutlineXml version: "); sb.append(VERSION); sb.append("</o:creator>\r");
 		flush();
 	}
 
@@ -261,7 +261,7 @@ public class Convert2OutlineXML {
 			String volume = "";
 
 			while (line != null) {
-				String[] fields = line.split("[\t,]");
+				String[] fields = line.split("[\\|]");
 				
 				int num = fields.length;
 
@@ -332,24 +332,6 @@ public class Convert2OutlineXML {
 		System.err.println(outFileName + " written");
 	}
 	
-	private static void printHelp() {
-		System.err.print("java -jar csv2outline.jar [-host <hostname or ip address>] [-port <portnumber>] (-doc <pathname> | -docdir <pathname>) -outdir <pathname>\r\n\r\n"
-				+ "-help - print this message and exits\r\n"
-				+ "-version - prints the version and exits\r\n"
-				+ "-doc <pathname> - path to dkar chag in tab delimited csv\r\n"
-				+ "-docdir <pathname> - path to directory of dkar chag in tab delimited csv\r\n"
-				+ "-outdir <pathname> - path to base directory in which Outline XML will be written - no trailing slash '/'\r\n"
-				+ "-type <outline type> - outline type name. Defaults to 'subjectCollection'\r\n"
-				+ "-who <outline creator name> - name of the person who created the outline\r\n"
-				+ "-title <work title> - title of the work that the outline is for\r\n"
-				+ "-folio <book|text|cont> - form of folio information. Defaults to text\r\n"
-				+ "-verbose - prints basic processing information\r\n"
-				+ "-debug - prints diagnostic information useful in debugging format problems\r\n"
-				+ "-trace - prints each token\r\n"
-				+ "\r\nConvert2Outline2 version: " + VERSION + "\r\n"
-				);
-	}
-	
 	/**
 	 * converts a tab separated csv file to XML Outline.
 	 * If outNm is null then it is computed based on context of collection, volume and index
@@ -375,11 +357,11 @@ public class Convert2OutlineXML {
 			System.exit(1);
 		}
 		
-		String[] fields = first.split("[\t,]");
+		String[] fields = first.split("[\\|]");
 		
 		while (fields.length == 0) {
 			first = in.readLine();
-			fields = first.split("[\t,]");
+			fields = first.split("[\\|]");
 		}
 		
 		String wRid = fields[0].trim();
@@ -433,6 +415,24 @@ public class Convert2OutlineXML {
 			System.exit(1);
 		}
 	}
+    
+    private static void printHelp() {
+        System.err.print("java -jar csv2outline.jar (-doc <pathname> | -docdir <pathname>) -outdir <pathname>\r\n\r\n"
+                + "-help - print this message and exits\r\n"
+                + "-version - prints the version and exits\r\n"
+                + "-doc <pathname> - path to dkar chag in vertical bar, '|', delimited csv\r\n"
+                + "-docdir <pathname> - path to directory of dkar chag in tab delimited csv\r\n"
+                + "-outdir <pathname> - path to base directory in which Outline XML will be written - no trailing slash '/'\r\n"
+                + "-type <outline type> - outline type name. Defaults to 'subjectCollection'\r\n"
+                + "-who <outline creator name> - name of the person who created the outline\r\n"
+                + "-title <work title> - title of the work that the outline is for\r\n"
+                + "-folio <book|text|cont> - form of folio information. Defaults to text\r\n"
+                + "-verbose - prints basic processing information\r\n"
+                + "-debug - prints diagnostic information useful in debugging format problems\r\n"
+                + "-trace - prints each token\r\n"
+                + "\r\nConvert2Outline2 version: " + VERSION + "\r\n"
+                );
+    }
 
 	/**
 	 * @param args
