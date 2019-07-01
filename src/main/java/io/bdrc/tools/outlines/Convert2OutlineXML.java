@@ -1,4 +1,4 @@
-package org.tbrc.tools.outlines;
+package io.bdrc.tools.outlines;
 /*
  * This program converts a variety of file formats into Unicode Tibetan XML for inclusion into the TBRC Library.
  * Copyright (c) 2010 TBRC
@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import io.bdrc.ewtsconverter.EwtsConverter;
 //import org.tbrc.common.shared.Converter;
 
 public class Convert2OutlineXML {
@@ -42,7 +43,7 @@ public class Convert2OutlineXML {
 
 	}
 	
-	Converter tibConverter = new Converter(true, true, true, false);
+	EwtsConverter tibConverter = new EwtsConverter(true, true, true, false);
 	
 	private void setOutlineRid(String outlineRid) {
 		oRid = outlineRid;
