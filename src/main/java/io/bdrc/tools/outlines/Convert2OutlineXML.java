@@ -417,7 +417,7 @@ public class Convert2OutlineXML {
 	}
     
     private static void printHelp() {
-        System.err.print("java -jar csv2outline.jar (-doc <pathname> | -docdir <pathname>) -outdir <pathname>\r\n\r\n"
+        System.err.print("java -jar csv2outline.jar (-doc <pathname> | -docdir <pathname>) -outdir <pathname> -who <name> -title <work title>\r\n\r\n"
                 + "-help - print this message and exits\r\n"
                 + "-version - prints the version and exits\r\n"
                 + "-doc <pathname> - path to dkar chag in vertical bar, '|', delimited csv\r\n"
