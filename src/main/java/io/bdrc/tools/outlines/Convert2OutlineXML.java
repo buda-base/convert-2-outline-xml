@@ -24,32 +24,28 @@ import java.util.Date;
 import java.util.List;
 
 import io.bdrc.ewtsconverter.EwtsConverter;
-//import org.tbrc.common.shared.Converter;
 
 public class Convert2OutlineXML {
-	private static String VERSION = "1.6.0";
+	private static String VERSION = "1.7.0";
 	static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 	
 	static boolean debug = false;
-	static boolean verbose = false;
+    static boolean verbose = false;
+    static boolean extended = false;
 	
-	private StringBuffer sb = new StringBuffer();
-	private PrintWriter out = null;
+	private static StringBuffer sb = new StringBuffer();
+	private static PrintWriter out = null;
 	
-	private String oRid = "";
-	private int nodeCounter = 1;
+	private static String oRid = "";
+	private static int nodeCounter = 1;
 	
-	private Convert2OutlineXML() {
-
-	}
+	static EwtsConverter tibConverter = new EwtsConverter(true, true, true, false);
 	
-	EwtsConverter tibConverter = new EwtsConverter(true, true, true, false);
-	
-	private void setOutlineRid(String outlineRid) {
+	private static void setOutlineRid(String outlineRid) {
 		oRid = outlineRid;
 	}
 	
-	private void writeNodeRid() {
+	private static void writeNodeRid() {
 		String counter = String.format("%04d", nodeCounter);
 		sb.append(" RID='");
 		sb.append(oRid);
@@ -59,12 +55,12 @@ public class Convert2OutlineXML {
 		nodeCounter++;
 	}
 	
-	private void flush() {
+	private static void flush() {
 		out.write(sb.toString());
 		sb.delete(0, sb.length());
 	}
 
-	private void writeHeader(String oRid, String wRid, String type, String who, String title) {
+	private static void writeHeader(String oRid, String wRid, String type, String who, String title) {
 		
 		sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r");
 		sb.append("<o:outline xmlns:o='http://www.tbrc.org/models/outline#'");
@@ -80,7 +76,7 @@ public class Convert2OutlineXML {
 		flush();
 	}
 
-	private void writeCloseOutline(String who) {
+	private static void writeCloseOutline(String who) {
 		// close the last volume node
 		sb.append("  </o:node>\r");
 		
@@ -103,7 +99,7 @@ public class Convert2OutlineXML {
 		out.close();
 	}
 	
-	private void writeOpenVolume(String volume) {
+	private static void writeOpenVolume(String volume) {
 		sb.append("  <o:node type='volume'");
 		writeNodeRid();
 		sb.append(">\r");
@@ -113,12 +109,12 @@ public class Convert2OutlineXML {
 		sb.append("</o:name>\r");
 	}
 	
-	private void writeCloseVolume() {
+	private static void writeCloseVolume() {
 		sb.append("  </o:node>\r");
 		flush();
 	}
 	
-	private String normalizeTitle(String title) {
+	private static String normalizeTitle(String title) {
 		if (title != null) {
 			title = title.replace(" zhes bya ba bzhugs so:", "");
 			title = title.replace(" zhes bya ba bzhugs:", "");
@@ -137,7 +133,38 @@ public class Convert2OutlineXML {
 		return title;
 	}
 	
-	private void writeLocationDescription(String aStart, String iStart, String aEnd, String iEnd, String folio, String folioStart, String folioEnd) {
+	static String[] noStrs = new String[] { };
+	
+	private static void writeExtended(String[] fields) {
+	    int len = fields.length;
+	    String[] authors = len > 7 ? fields[7].split(",") : noStrs;
+	    String[] subjects = len > 8 ? fields[8].split(",") : noStrs;
+	    String note = len > 9 ? fields[9] : "";
+	    
+	    for (String a : authors) {
+	        if (!a.isEmpty()) {
+	            sb.append("      <o:creator person='");
+	            sb.append(a);
+	            sb.append("'>lookup_if_needed</o:creator>\r");
+	        }
+	    }
+	    
+	    for (String subj : subjects) {
+	        if (!subj.isEmpty()) {
+                sb.append("      <o:subject type='isAboutUncontrolled' class='");
+                sb.append(subj);
+                sb.append("'>lookup_if_needed</o:subject>\r");
+	        }
+	    }
+	    
+	    if (!note.isEmpty()) {
+	        sb.append("      <o:note>");
+	        sb.append(note);
+	        sb.append("</o:note>\r");
+	    }
+	}
+	
+	private static void writeLocationDescription(String aStart, String iStart, String aEnd, String iEnd, String folio, String folioStart, String folioEnd) {
 		if (folio.equals("book")) {
 			sb.append("      <o:description type='location'>pp. ");
 			sb.append(iStart);
@@ -183,7 +210,7 @@ public class Convert2OutlineXML {
 		}
 	}
 
-	private void writeTextNode(String title, String volume, String aStart, String iStart, String aEnd, String iEnd, String folio, String folioStart, String folioEnd) 
+	private static void writeTextNode(String title, String volume, String aStart, String iStart, String aEnd, String iEnd, String folio, String folioStart, String folioEnd, String[] fields) 
 	{
 		sb.append("    <o:node type='text'");
 		writeNodeRid();
@@ -207,11 +234,17 @@ public class Convert2OutlineXML {
 		
 		writeLocationDescription(aStart, iStart, aEnd, iEnd, folio, folioStart, folioEnd);
 		
+		if (extended) {
+		    writeExtended(fields);
+		}
+		
 		sb.append("    </o:node>\r");
 	}
 	
-	private boolean fieldsCheck(String folio, int num) {
-		if (folio.equals("cont") && (num == 10 || num == 9)) {
+	private static boolean fieldsCheck(String folio, int num) {
+	    if (extended && num >= 8 && num <= 11 && folio.equals("text")) {
+	        return true;
+	    } else if (folio.equals("cont") && (num == 10 || num == 9)) {
 			return true;
 		} else if (num == 7 || num == 8) {
 			return true;
@@ -220,8 +253,10 @@ public class Convert2OutlineXML {
 		}
 	}
 	
-	private boolean tooFew(String folio, int num) {
-		if (folio.equals("cont") && num < 9) {
+	private static boolean tooFew(String folio, int num) {
+		if (extended && num < 7 && folio.equals("text")) {
+            return true;
+        } else if (folio.equals("cont") && num < 9) {
 			return true;
 		} else if (num < 7) {
 			return true;
@@ -230,8 +265,10 @@ public class Convert2OutlineXML {
 		}
 	}
 	
-	private int getOffset(String folio, int num) {
-		if (folio.equals("cont") && num == 9) {
+	private static int getOffset(String folio, int num) {
+		if (extended && num == 11 && folio.equals("text")) {
+            return 0;
+        } else if (folio.equals("cont") && num == 9) {
 			return 0;
 		} else if (folio.equals("cont") && num == 10) {
 			return 1;
@@ -242,7 +279,7 @@ public class Convert2OutlineXML {
 		}
 	}
 
-	private void process(String inFileName, String outFileName, String type, String folio, String who, String workTitle) 
+	private static void process(String inFileName, String outFileName, String type, String folio, String who, String workTitle) 
 	throws Exception {
 		
 		BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(inFileName), "UTF-8"));
@@ -282,6 +319,10 @@ public class Convert2OutlineXML {
 						}
 
 						wRid = fields[0].trim();
+						
+						if (extended) {
+						    workTitle = fields[10].trim();
+						}
 
 						writeHeader(oRid, wRid, type, who, workTitle);
 					}
@@ -316,7 +357,7 @@ public class Convert2OutlineXML {
 					String fStart = (folio.equals("cont") ? fields[7+offset] : null);
 					String fEnd = (folio.equals("cont") ? fields[8+offset] : null);
 
-					writeTextNode(title, volume, aStart, iStart, aEnd, iEnd, folio, fStart, fEnd);
+					writeTextNode(title, volume, aStart, iStart, aEnd, iEnd, folio, fStart, fEnd, fields);
 
 					firstTime = false;
 					line = in.readLine();
@@ -333,7 +374,7 @@ public class Convert2OutlineXML {
 	}
 	
 	/**
-	 * converts a tab separated csv file to XML Outline.
+	 * converts a '|' separated csv file to XML Outline.
 	 * If outNm is null then it is computed based on context of collection, volume and index
 	 * 
 	 * @param inNm path of input csv file
@@ -370,9 +411,7 @@ public class Convert2OutlineXML {
 		
 		in.close();
 		
-		Convert2OutlineXML converter = new Convert2OutlineXML();
-		
-		converter.setOutlineRid(outlineRid);
+		setOutlineRid(outlineRid);
 		
 		if (docNm.endsWith("-b.csv")) {
 			folio = "book";
@@ -388,7 +427,7 @@ public class Convert2OutlineXML {
 			System.err.println("In File: " + docNm + "\rOut File: " + outNm);
 		}
 		
-		converter.process(docNm, outNm, type, folio, who, workTitle);
+		process(docNm, outNm, type, folio, who, workTitle);
 	}
 	
 	private static void convertFiles(String docDirNm, String outDir, String type, String folio, String who, String workTitle) 
@@ -427,6 +466,7 @@ public class Convert2OutlineXML {
                 + "-who <outline creator name> - name of the person who created the outline\r\n"
                 + "-title <work title> - title of the work that the outline is for\r\n"
                 + "-folio <book|text|cont> - form of folio information. Defaults to text\r\n"
+                + "-extended - indicates an extended csv with up to 4 additional columns\r\n"
                 + "-verbose - prints basic processing information\r\n"
                 + "-debug - prints diagnostic information useful in debugging format problems\r\n"
                 + "-trace - prints each token\r\n"
@@ -465,9 +505,11 @@ public class Convert2OutlineXML {
 					folio = (++i < args.length ? args[i] : null);
 				} else if (arg.equals("-debug")) {
 					debug = true;
-				} else if (arg.equals("-verbose")) {
-					verbose = true;
-				} else if (arg.equals("-help")) {
+				} else if (arg.equals("-extended")) {
+                    extended = true;
+                } else if (arg.equals("-verbose")) {
+                    verbose = true;
+                } else if (arg.equals("-help")) {
 					printHelp();
 					System.exit(0);
 				} else if (arg.equals("-version")) {
