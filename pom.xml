@@ -4,7 +4,7 @@
 	<groupId>io.bdrc</groupId>
 	<artifactId>convert-2-outline-xml</artifactId>
 	<packaging>jar</packaging>
-	<version>1.8.0</version>
+	<version>1.8.1</version>
 	<name>convert-2-outline-xml</name>
 	<url>https://github.com/buda-base/convert-2-outline-xml</url>
 	<licenses>
