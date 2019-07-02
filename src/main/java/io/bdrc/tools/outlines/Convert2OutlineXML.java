@@ -14,7 +14,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
@@ -23,23 +26,28 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import com.opencsv.CSVParser;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+
 import io.bdrc.ewtsconverter.EwtsConverter;
 
 public class Convert2OutlineXML {
-	private static String VERSION = "1.7.0";
+	private static String VERSION = "1.8.0";
 	static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 	
 	static boolean debug = false;
     static boolean verbose = false;
     static boolean extended = false;
 	
-	private static StringBuffer sb = new StringBuffer();
+	private static StringBuilder sb = new StringBuilder();
 	private static PrintWriter out = null;
 	
 	private static String oRid = "";
 	private static int nodeCounter = 1;
 	
-	static EwtsConverter tibConverter = new EwtsConverter(true, true, true, false);
+	static EwtsConverter tibConverter = new EwtsConverter(true, true, false, false);
 	
 	private static void setOutlineRid(String outlineRid) {
 		oRid = outlineRid;
@@ -116,20 +124,11 @@ public class Convert2OutlineXML {
 	
 	private static String normalizeTitle(String title) {
 		if (title != null) {
-			title = title.replace(" zhes bya ba bzhugs so:", "");
-			title = title.replace(" zhes bya ba bzhugs:", "");
-			title = title.replace(" ces bya ba bzhugs so:", "");
-			title = title.replace(" ces bya ba bzhugs:", "");
 			title = title.replace(" bzhugs so:", "");
 			title = title.replace(" bzhugs:", "");
-			title = title.replace(" zhes bya ba bzhugs so/", "");
-			title = title.replace(" zhes bya ba bzhugs/", "");
-			title = title.replace(" ces bya ba bzhugs so/", "");
-			title = title.replace(" ces bya ba bzhugs/", "");
 			title = title.replace(" bzhugs so/", "");
 			title = title.replace(" bzhugs/", "");
 		}
-		
 		return title;
 	}
 	
@@ -279,114 +278,116 @@ public class Convert2OutlineXML {
 		}
 	}
 
-	private static void process(String inFileName, String outFileName, String type, String folio, String who, String workTitle) 
-	throws Exception {
-		
-		BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(inFileName), "UTF-8"));
-		out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFileName), "UTF-8")));
-		
-		// read in file and write out the Volume and Text nodes
-		String line = in.readLine();
-		int lineNum = 1;
-		
-		if (line != null) {
-			// skip heading line in csv file
-			line = in.readLine();
+	private static void process(InputStream inputStream, String type, String folio, String who) throws IOException {
+        final BufferedReader in = new BufferedReader(new InputStreamReader(inputStream));
+        final CSVReader reader;
+        final CSVParser parser = new CSVParserBuilder().build();
+        reader = new CSVReaderBuilder(in)
+                .withCSVParser(parser)
+                .build();
+        String[] line = reader.readNext();
+        // ignoring first line
+        line = reader.readNext();
+        int lineNum = 1;
+        String workTitle = null;
+        boolean firstTime = true;
+		String wRid = "";
+		String volume = "";
+
+		while (line != null) {
 			
-			boolean firstTime = true;
-			String wRid = "";
-			String volume = "";
+			int num = line.length;
 
-			while (line != null) {
-				String[] fields = line.split("[\\|]");
-				
-				int num = fields.length;
+			if (! fieldsCheck(folio, num)) {
+				System.err.println("Warning Outline CSV contains " + line.length + " fields on line " + lineNum);
+			}
+			
+			if (tooFew(folio, num)) {
+				System.err.println("Outline CSV contains too few fields on line. Skipping.");
+				lineNum += 1;
+				line = reader.readNext();
+				continue;
+			} else {
+				if (firstTime) {
+					if (line[0].isEmpty()) {
+						System.err.println("Outline CSV does not contain work Rid on first line of data!!");
+						System.exit(2);
+					}
 
-				if (! fieldsCheck(folio, num)) {
-					System.err.println("Warning Outline CSV contains " + fields.length + " fields on line " + lineNum);
+					wRid = line[0].trim();
+					
+					if (extended) {
+					    workTitle = line[10].trim();
+					}
+
+					writeHeader(oRid, wRid, type, who, workTitle);
+				}
+
+				if (! line[1].isEmpty()) {
+					volume = line[1];
+
+					if (! firstTime) {
+						writeCloseVolume();
+					}
+
+					writeOpenVolume(volume);
+				}
+
+				// now write the Text node
+				String title = line[2];
+				List<String> warnings = new ArrayList<String>();
+				title = tibConverter.toWylie(title, warnings, false);
+				if (verbose && !warnings.isEmpty()) {
+					for (String warning : warnings) {
+						System.err.println("toWylie: " + warning);
+					}
 				}
 				
-				if (tooFew(folio, num)) {
-					System.err.println("Outline CSV contains too few fields on line. Skipping.");
+				int offset = getOffset(folio, num);
+				
+				// skip the biblio title field
+				String aStart = line[3+offset];
+				String iStart = line[4+offset];
+				String aEnd = line[5+offset];
+				String iEnd = line[6+offset];
+				String fStart = (folio.equals("cont") ? line[7+offset] : null);
+				String fEnd = (folio.equals("cont") ? line[8+offset] : null);
 
-					line = in.readLine();
-					lineNum++;
-				} else {
-					if (firstTime) {
-						if (fields[0].isEmpty()) {
-							System.err.println("Outline CSV does not contain work Rid on first line of data!!");
-							System.exit(2);
-						}
+				writeTextNode(title, volume, aStart, iStart, aEnd, iEnd, folio, fStart, fEnd, line);
 
-						wRid = fields[0].trim();
-						
-						if (extended) {
-						    workTitle = fields[10].trim();
-						}
-
-						writeHeader(oRid, wRid, type, who, workTitle);
-					}
-
-					if (! fields[1].isEmpty()) {
-						volume = fields[1];
-
-						if (! firstTime) {
-							writeCloseVolume();
-						}
-
-						writeOpenVolume(volume);
-					}
-
-					// now write the Text node
-					String title = fields[2];
-					List<String> warnings = new ArrayList<String>();
-					title = tibConverter.toWylie(title, warnings, false);
-					if (verbose && !warnings.isEmpty()) {
-						for (String warning : warnings) {
-							System.err.println("toWylie: " + warning);
-						}
-					}
-					
-					int offset = getOffset(folio, num);
-					
-					// skip the biblio title field
-					String aStart = fields[3+offset];
-					String iStart = fields[4+offset];
-					String aEnd = fields[5+offset];
-					String iEnd = fields[6+offset];
-					String fStart = (folio.equals("cont") ? fields[7+offset] : null);
-					String fEnd = (folio.equals("cont") ? fields[8+offset] : null);
-
-					writeTextNode(title, volume, aStart, iStart, aEnd, iEnd, folio, fStart, fEnd, fields);
-
-					firstTime = false;
-					line = in.readLine();
-					lineNum++;
-				}
+				firstTime = false;
+				lineNum += 1;
+				line = reader.readNext();
 			}
 		}
 
 		writeCloseOutline(who);
-
-		in.close();
-
-		System.err.println(outFileName + " written");
+	}
+	
+	private static void process(String inFileName, String outFileName, String type, String folio, String who, String workTitle) 
+	throws Exception {
+		
+		InputStream in = new FileInputStream(inFileName);
+		out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFileName), "UTF-8")));
+		
+		process(in, type, folio, who);
+		
 	}
 	
 	/**
 	 * converts a '|' separated csv file to XML Outline.
 	 * If outNm is null then it is computed based on context of collection, volume and index
 	 * 
-	 * @param inNm path of input csv file
-	 * @param outNm if non-null path desired path of resulting XML file
+	 * @param fileName path of input csv file
+	 * @param outDir if non-null path desired path of resulting XML file
 	 * @param outBase if non-null the base directory for storing the XML file
 	 * @throws Exception
 	 */
-	private static void convertFile(String docNm, String outDir, String type, String folio, String who, String workTitle) 
+	private static void convertFile(String fileName, String outDir, String type, String folio, String who, String workTitle) 
 	throws Exception {
-		File f = new File(docNm);
+		File f = new File(fileName);
 		if (!f.exists()) {
-			System.err.println("Specified file " + docNm + " doesn't exist");
+			System.err.println("Specified file " + fileName + " doesn't exist");
 			System.exit(1);
 		}
 		
@@ -394,7 +395,7 @@ public class Convert2OutlineXML {
 		in.readLine(); // skip header line
 		String first = in.readLine();
 		if (first == null) {
-			System.err.println("Specified file " + docNm + " has TOO few lines.");
+			System.err.println("Specified file " + fileName + " has TOO few lines.");
 			System.exit(1);
 		}
 		
@@ -413,21 +414,21 @@ public class Convert2OutlineXML {
 		
 		setOutlineRid(outlineRid);
 		
-		if (docNm.endsWith("-b.csv")) {
+		if (fileName.endsWith("-b.csv")) {
 			folio = "book";
-		} else if (docNm.endsWith("-t.csv")) {
+		} else if (fileName.endsWith("-t.csv")) {
 			folio = "text";
-		} else if (docNm.endsWith("-c.csv")) {
+		} else if (fileName.endsWith("-c.csv")) {
 			folio = "cont";
 		}
 		
 		String outNm = outDir + "/" + outlineRid + ".xml";
 		
 		if (verbose) {
-			System.err.println("In File: " + docNm + "\rOut File: " + outNm);
+			System.err.println("In File: " + fileName + "\rOut File: " + outNm);
 		}
 		
-		process(docNm, outNm, type, folio, who, workTitle);
+		process(fileName, outNm, type, folio, who, workTitle);
 	}
 	
 	private static void convertFiles(String docDirNm, String outDir, String type, String folio, String who, String workTitle) 
