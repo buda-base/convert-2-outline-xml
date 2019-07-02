@@ -17,6 +17,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
@@ -47,7 +48,7 @@ public class Convert2OutlineXML {
 	
 	static boolean debug = false;
     static boolean verbose = false;
-    static boolean extended = false;
+    static public boolean extended = false;
 	
 	private static StringBuilder sb = new StringBuilder();
 	private static PrintWriter out = null;
@@ -102,7 +103,7 @@ public class Convert2OutlineXML {
 		
 		sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r");
 		sb.append("<o:outline xmlns:o='http://www.tbrc.org/models/outline#'");
-		sb.append(" RID='"); sb.append(oRid); sb.append("' status='provisional' pagination='absolute' webAccess='fullAccess'>\r");
+		sb.append(" RID='"); sb.append(oRid); sb.append("' status='provisional' pagination='absolute'>\r");
 
 		sb.append("  <o:name lang='tibetan' encoding='extendedWylie'>"); sb.append(title); sb.append("</o:name>\r");
 		
@@ -319,7 +320,6 @@ public class Convert2OutlineXML {
         // ignoring first line
         line = reader.readNext();
         int lineNum = 1;
-        String workTitle = null;
         boolean firstTime = true;
 		String wRid = "";
 		String volume = "";
@@ -388,6 +388,13 @@ public class Convert2OutlineXML {
 		}
 
 		writeCloseOutline(who);
+	}
+
+	// for tests
+	public static void process(InputStream inputStream, String oRid, OutputStream outArg, String type, String folio, String who) throws IOException {
+		out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outArg, "UTF-8")));
+		setOutlineRid(oRid);
+		process(inputStream, type, folio, who);
 	}
 	
 	private static void process(String inFileName, String outFileName, String type, String folio, String who) 
