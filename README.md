@@ -12,7 +12,7 @@ Simple run with a single input file:
 ```
 java -jar target/convert-2-outline-xml-1.7.0.jar \
      -doc /path/Outline-W8LS32723.csv -outdir /outPath \
-     -who CodeFerret -title "phyag rgya chen po'i dbang bka'"
+     -who CodeFerret
 ```
 The output file will be:
 ```

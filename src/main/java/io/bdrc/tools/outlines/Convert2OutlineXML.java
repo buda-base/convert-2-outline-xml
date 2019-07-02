@@ -21,7 +21,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 
 import io.bdrc.ewtsconverter.EwtsConverter;
 
@@ -40,6 +49,28 @@ public class Convert2OutlineXML {
 	private static int nodeCounter = 1;
 	
 	static EwtsConverter tibConverter = new EwtsConverter(true, true, true, false);
+	
+	static HttpClient client = HttpClientBuilder.create().build();
+	static Map<String, String> rids2names = new HashMap<>();
+	
+	private static String getName(String rid) {
+	    String name = rids2names.get(rid);
+        
+	    if (name == null) {
+	        HttpGet get=new HttpGet("https://www.tbrc.org/public?module=any&query=name&args="+rid);
+	        try {
+	            HttpResponse resp = client.execute(get);
+	            HttpEntity entity = resp.getEntity();
+	            name = entity != null ? EntityUtils.toString(entity).trim() : "no name";
+	            rids2names.put(rid, name);
+	        } catch (Exception ex) {
+	            ex.printStackTrace();
+	            return "lookup failed";
+	        }
+	    }
+	    
+        return name;
+	}
 	
 	private static void setOutlineRid(String outlineRid) {
 		oRid = outlineRid;
@@ -141,11 +172,11 @@ public class Convert2OutlineXML {
 	    String[] subjects = len > 8 ? fields[8].split(",") : noStrs;
 	    String note = len > 9 ? fields[9] : "";
 	    
-	    for (String a : authors) {
-	        if (!a.isEmpty()) {
+	    for (String auth : authors) {
+	        if (!auth.isEmpty()) {
 	            sb.append("      <o:creator person='");
-	            sb.append(a);
-	            sb.append("'>lookup_if_needed</o:creator>\r");
+	            sb.append(auth);
+	            sb.append("'>"+getName(auth)+"</o:creator>\r");
 	        }
 	    }
 	    
@@ -153,7 +184,7 @@ public class Convert2OutlineXML {
 	        if (!subj.isEmpty()) {
                 sb.append("      <o:subject type='isAboutUncontrolled' class='");
                 sb.append(subj);
-                sb.append("'>lookup_if_needed</o:subject>\r");
+                sb.append("'>"+getName(subj)+"</o:subject>\r");
 	        }
 	    }
 	    
@@ -242,7 +273,7 @@ public class Convert2OutlineXML {
 	}
 	
 	private static boolean fieldsCheck(String folio, int num) {
-	    if (extended && num >= 8 && num <= 11 && folio.equals("text")) {
+	    if (extended && num >= 8 && num <= 10 && folio.equals("text")) {
 	        return true;
 	    } else if (folio.equals("cont") && (num == 10 || num == 9)) {
 			return true;
@@ -266,7 +297,7 @@ public class Convert2OutlineXML {
 	}
 	
 	private static int getOffset(String folio, int num) {
-		if (extended && num == 11 && folio.equals("text")) {
+		if (extended && num <= 10 && folio.equals("text")) {
             return 0;
         } else if (folio.equals("cont") && num == 9) {
 			return 0;
@@ -279,7 +310,7 @@ public class Convert2OutlineXML {
 		}
 	}
 
-	private static void process(String inFileName, String outFileName, String type, String folio, String who, String workTitle) 
+	private static void process(String inFileName, String outFileName, String type, String folio, String who) 
 	throws Exception {
 		
 		BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(inFileName), "UTF-8"));
@@ -318,13 +349,9 @@ public class Convert2OutlineXML {
 							System.exit(2);
 						}
 
-						wRid = fields[0].trim();
-						
-						if (extended) {
-						    workTitle = fields[10].trim();
-						}
-
-						writeHeader(oRid, wRid, type, who, workTitle);
+						wRid = fields[0].trim();						
+						String title = getName(wRid);
+						writeHeader(oRid, wRid, type, who, title);
 					}
 
 					if (! fields[1].isEmpty()) {
@@ -382,7 +409,7 @@ public class Convert2OutlineXML {
 	 * @param outBase if non-null the base directory for storing the XML file
 	 * @throws Exception
 	 */
-	private static void convertFile(String docNm, String outDir, String type, String folio, String who, String workTitle) 
+	private static void convertFile(String docNm, String outDir, String type, String folio, String who) 
 	throws Exception {
 		File f = new File(docNm);
 		if (!f.exists()) {
@@ -427,10 +454,10 @@ public class Convert2OutlineXML {
 			System.err.println("In File: " + docNm + "\rOut File: " + outNm);
 		}
 		
-		process(docNm, outNm, type, folio, who, workTitle);
+		process(docNm, outNm, type, folio, who);
 	}
 	
-	private static void convertFiles(String docDirNm, String outDir, String type, String folio, String who, String workTitle) 
+	private static void convertFiles(String docDirNm, String outDir, String type, String folio, String who) 
 	throws Exception {
 		File dir = new File(docDirNm);
 		if (dir.isDirectory()) {
@@ -447,7 +474,7 @@ public class Convert2OutlineXML {
 			for (int i = 0; i < docs.length; i++) {
 				String docNm = docDirNm + "/" + docs[i];
 				System.err.println("CONVERTING " + docs[i]);
-				convertFile(docNm, outDir, type, folio, who, workTitle);
+				convertFile(docNm, outDir, type, folio, who);
 			}
 		} else {
 			System.err.println("Specified directory " + docDirNm + " doesn't exist or isn't a directory");
@@ -464,7 +491,6 @@ public class Convert2OutlineXML {
                 + "-outdir <pathname> - path to base directory in which Outline XML will be written - no trailing slash '/'\r\n"
                 + "-type <outline type> - outline type name. Defaults to 'subjectCollection'\r\n"
                 + "-who <outline creator name> - name of the person who created the outline\r\n"
-                + "-title <work title> - title of the work that the outline is for\r\n"
                 + "-folio <book|text|cont> - form of folio information. Defaults to text\r\n"
                 + "-extended - indicates an extended csv with up to 4 additional columns\r\n"
                 + "-verbose - prints basic processing information\r\n"
@@ -483,7 +509,6 @@ public class Convert2OutlineXML {
 			String docDirNm = null;
 			String outDir = null;
 			String who = "anon";
-			String workTitle = "not specified";
 			String type = "subjectCollection";
 			String folio = "text";
 
@@ -499,8 +524,6 @@ public class Convert2OutlineXML {
 					type = (++i < args.length ? args[i] : null);
 				} else if (arg.equals("-who")) {
 					who = (++i < args.length ? args[i] : null);
-				} else if (arg.equals("-title")) {
-					workTitle = (++i < args.length ? args[i] : null);
 				} else if (arg.equals("-folio")) {
 					folio = (++i < args.length ? args[i] : null);
 				} else if (arg.equals("-debug")) {
@@ -521,11 +544,11 @@ public class Convert2OutlineXML {
 			
 			if (docDirNm != null) {
 				
-				convertFiles(docDirNm, outDir, type, folio, who, workTitle);
+				convertFiles(docDirNm, outDir, type, folio, who);
 			
 			} else if (docNm != null){
 				
-				convertFile(docNm, outDir, type, folio, who, workTitle);
+				convertFile(docNm, outDir, type, folio, who);
 			
 			} else {
 				System.err.println("Please provide a pathname for either an input -doc or directory -docDir.\r\n");
