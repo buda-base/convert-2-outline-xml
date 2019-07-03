@@ -106,7 +106,7 @@ public class Convert2OutlineXML {
 		sb.delete(0, sb.length());
 	}
 
-	private static void writeHeader(String oRid, String wRid, String type, String who, String title) {
+	private static void writeHeader(String oRid, String wRid, String type, String title, String authorshipNote) {
 		
 		sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r");
 		sb.append("<o:outline xmlns:o='http://www.tbrc.org/models/outline#'");
@@ -118,7 +118,7 @@ public class Convert2OutlineXML {
 					   sb.append("' work='"); sb.append(wRid); sb.append("'>"); 
 					   sb.append(title); sb.append("</o:isOutlineOf>\r");
 		
-		sb.append("  <o:creator type='hasScribe'>"); sb.append(who); sb.append(" via TBRC Convert2OutlineXml version: "); sb.append(VERSION); sb.append("</o:creator>\r");
+		sb.append("  <o:creator type='hasScribe'>"); sb.append(authorshipNote); sb.append("</o:creator>\r");
 		flush();
 	}
 
@@ -327,7 +327,7 @@ public class Convert2OutlineXML {
 		}
 	}
 
-	private static void process(InputStream inputStream, String type, String folio, String who) throws IOException {
+	private static void process(InputStream inputStream, String type, String folio, String who, String authorshipNote) throws IOException {
         final BufferedReader in = new BufferedReader(new InputStreamReader(inputStream));
         final CSVReader reader;
         final CSVParser parser = new CSVParserBuilder().build();
@@ -378,7 +378,7 @@ public class Convert2OutlineXML {
 
 					wRid = siline[0].trim();
 					String title = getName(wRid);
-					writeHeader(oRid, wRid, type, who, title);
+					writeHeader(oRid, wRid, type, title, authorshipNote);
 				}
 
 				if (! siline[1].isEmpty() && !siline[1].equals(volume)) {
@@ -422,19 +422,19 @@ public class Convert2OutlineXML {
 	}
 
 	// for tests
-	public static void process(InputStream inputStream, String oRid, OutputStream outArg, String type, String folio, String who) throws IOException {
+	public static void process(InputStream inputStream, String oRid, OutputStream outArg, String type, String folio, String who, String authorshipNote) throws IOException {
 		out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outArg, "UTF-8")));
 		setOutlineRid(oRid);
-		process(inputStream, type, folio, who);
+		process(inputStream, type, folio, who, authorshipNote);
 	}
 	
-	private static void process(String inFileName, String outFileName, String type, String folio, String who) 
+	private static void process(String inFileName, String outFileName, String type, String folio, String who, String authorshipNote) 
 	throws Exception {
 		
 		InputStream in = new FileInputStream(inFileName);
 		out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFileName), "UTF-8")));
 		
-		process(in, type, folio, who);
+		process(in, type, folio, who, authorshipNote);
 		
 	}
 	
@@ -447,7 +447,7 @@ public class Convert2OutlineXML {
 	 * @param outBase if non-null the base directory for storing the XML file
 	 * @throws Exception
 	 */
-	private static void convertFile(String fileName, String outDir, String type, String folio, String who) 
+	private static void convertFile(String fileName, String outDir, String type, String folio, String who, String authorshipNote) 
 	throws Exception {
 		File f = new File(fileName);
 		if (!f.exists()) {
@@ -485,6 +485,15 @@ public class Convert2OutlineXML {
 			folio = "text";
 		} else if (fileName.endsWith("-c.csv")) {
 			folio = "cont";
+		} else if (fileName.endsWith("-be.csv")) {
+			folio = "book";
+			extended = true;
+		} else if (fileName.endsWith("-te.csv")) {
+			folio = "text";
+			extended = true;
+		} else if (fileName.endsWith("-ce.csv")) {
+			folio = "cont";
+			extended = true;
 		}
 		
 		String outNm = outDir + "/" + outlineRid + ".xml";
@@ -493,10 +502,10 @@ public class Convert2OutlineXML {
 			System.err.println("In File: " + fileName + "\rOut File: " + outNm);
 		}
 
-		process(fileName, outNm, type, folio, who);
+		process(fileName, outNm, type, folio, who, authorshipNote);
 	}
 	
-	private static void convertFiles(String docDirNm, String outDir, String type, String folio, String who) 
+	private static void convertFiles(String docDirNm, String outDir, String type, String folio, String who, String authorshipNote) 
 	throws Exception {
 		File dir = new File(docDirNm);
 		if (dir.isDirectory()) {
@@ -513,7 +522,7 @@ public class Convert2OutlineXML {
 			for (int i = 0; i < docs.length; i++) {
 				String docNm = docDirNm + "/" + docs[i];
 				System.err.println("CONVERTING " + docs[i]);
-				convertFile(docNm, outDir, type, folio, who);
+				convertFile(docNm, outDir, type, folio, who, authorshipNote);
 			}
 		} else {
 			System.err.println("Specified directory " + docDirNm + " doesn't exist or isn't a directory");
@@ -531,7 +540,7 @@ public class Convert2OutlineXML {
                 + "-type <outline type> - outline type name. Defaults to 'subjectCollection'\r\n"
                 + "-who <outline creator name> - name of the person who created the outline\r\n"
                 + "-folio <book|text|cont> - form of folio information. Defaults to text\r\n"
-                + "-extended - indicates an extended csv with up to 4 additional columns\r\n"
+                + "-authorshipnote - The authorship indication that will appear in the outline\r\n"
                 + "-verbose - prints basic processing information\r\n"
                 + "-debug - prints diagnostic information useful in debugging format problems\r\n"
                 + "-trace - prints each token\r\n"
@@ -548,6 +557,7 @@ public class Convert2OutlineXML {
 			String docDirNm = null;
 			String outDir = null;
 			String who = "anon";
+			String authorshipNote = "via TBRC Convert2OutlineXml version "+VERSION;
 			String type = "subjectCollection";
 			String folio = "text";
 
@@ -563,6 +573,8 @@ public class Convert2OutlineXML {
 					type = (++i < args.length ? args[i] : null);
 				} else if (arg.equals("-who")) {
 					who = (++i < args.length ? args[i] : null);
+				} else if (arg.equals("-authorshipnote")) {
+					authorshipNote = (++i < args.length ? args[i]+" ; via TBRC Convert2OutlineXml version "+VERSION : null);
 				} else if (arg.equals("-folio")) {
 					folio = (++i < args.length ? args[i] : null);
 				} else if (arg.equals("-debug")) {
@@ -582,13 +594,9 @@ public class Convert2OutlineXML {
 			
 			
 			if (docDirNm != null) {
-				
-				convertFiles(docDirNm, outDir, type, folio, who);
-			
+				convertFiles(docDirNm, outDir, type, folio, who, authorshipNote);
 			} else if (docNm != null){
-				
-				convertFile(docNm, outDir, type, folio, who);
-			
+				convertFile(docNm, outDir, type, folio, who, authorshipNote);
 			} else {
 				System.err.println("Please provide a pathname for either an input -doc or directory -docDir.\r\n");
 				printHelp();

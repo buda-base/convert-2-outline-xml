@@ -14,7 +14,7 @@ public class OutlineTest {
 		final ClassLoader classLoader = OutlineTest.class.getClassLoader();
         final InputStream inputStream = classLoader.getResourceAsStream("Outline-W8LS32723.csv");
         Convert2OutlineXML.extended = true;
-        Convert2OutlineXML.process(inputStream, "O8LS32723", System.out, "subjectCollection", "text", "me");
+        Convert2OutlineXML.process(inputStream, "O8LS32723", System.out, "subjectCollection", "text", "me", "authorshipNote");
 	}
 	
 }
