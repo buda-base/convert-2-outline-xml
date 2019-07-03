@@ -451,11 +451,11 @@ public class Convert2OutlineXML {
 			System.exit(1);
 		}
 		
-		String[] fields = first.split("[\\|]");
+		String[] fields = first.split("[,]");
 		
 		while (fields.length == 0) {
 			first = in.readLine();
-			fields = first.split("[\\|]");
+			fields = first.split("[,]");
 		}
 		
 		String wRid = fields[0].trim();
