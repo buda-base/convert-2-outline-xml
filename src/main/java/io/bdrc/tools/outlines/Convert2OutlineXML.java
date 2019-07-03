@@ -69,11 +69,17 @@ public class Convert2OutlineXML {
 	        try {
 	            HttpResponse resp = client.execute(get);
 	            HttpEntity entity = resp.getEntity();
-	            name = entity != null ? EntityUtils.toString(entity).trim() : "no name";
+	            if (entity == null)
+	            	System.err.println("error: cannot find name for "+rid);
+	            name = EntityUtils.toString(entity).trim();
+	            if (name.isEmpty()) {
+	            	System.err.println("error: cannot find name for "+rid);
+	            	name = "no-name";
+	            }
 	            rids2names.put(rid, name);
 	        } catch (Exception ex) {
-	            ex.printStackTrace();
-	            return "lookup failed";
+	        	System.err.println("error: cannot find name for "+rid);
+	            return "no-name";
 	        }
 	    }
 	    
@@ -324,43 +330,57 @@ public class Convert2OutlineXML {
 		String wRid = "";
 		String volume = "";
 
+		// check if there are several volumes by looking at all the lines
+		List<String[]> lines = new ArrayList<>();
+		
+		boolean hasMultipleVolumes = false;
+		String lastVol = null;
 		while (line != null) {
-			
-			int num = line.length;
+			lines.add(line);
+			if (! line[1].isEmpty()) {
+				if (lastVol != null && !line[1].equals(lastVol)) {
+					hasMultipleVolumes = true;
+				}
+				lastVol = line[1];
+			}
+			line = reader.readNext();
+		}
+
+		for (String[] siline : lines) {
+			int num = siline.length;
 
 			if (! fieldsCheck(folio, num)) {
-				System.err.println("Warning Outline CSV contains " + line.length + " fields on line " + lineNum);
+				System.err.println("Warning Outline CSV contains " + siline.length + " fields on line " + lineNum);
 			}
 			
 			if (tooFew(folio, num)) {
 				System.err.println("Outline CSV contains too few fields on line. Skipping.");
 				lineNum += 1;
-				line = reader.readNext();
 				continue;
 			} else {
 				if (firstTime) {
-					if (line[0].isEmpty()) {
+					if (siline[0].isEmpty()) {
 						System.err.println("Outline CSV does not contain work Rid on first line of data!!");
 						System.exit(2);
 					}
 
-					wRid = line[0].trim();
+					wRid = siline[0].trim();
 					String title = getName(wRid);
 					writeHeader(oRid, wRid, type, who, title);
 				}
 
-				if (! line[1].isEmpty()) {
-					volume = line[1];
-
-					if (! firstTime) {
-						writeCloseVolume();
+				if (! siline[1].isEmpty() && !siline[1].equals(volume)) {
+					volume = siline[1];
+					if (hasMultipleVolumes) {
+						if (! firstTime) {
+							writeCloseVolume();
+						}
+						writeOpenVolume(volume);
 					}
-
-					writeOpenVolume(volume);
 				}
 
 				// now write the Text node
-				String title = line[2];
+				String title = siline[2];
 				List<String> warnings = new ArrayList<String>();
 				title = tibConverter.toWylie(title, warnings, false);
 				if (verbose && !warnings.isEmpty()) {
@@ -372,18 +392,17 @@ public class Convert2OutlineXML {
 				int offset = getOffset(folio, num);
 				
 				// skip the biblio title field
-				String aStart = line[3+offset];
-				String iStart = line[4+offset];
-				String aEnd = line[5+offset];
-				String iEnd = line[6+offset];
-				String fStart = (folio.equals("cont") ? line[7+offset] : null);
-				String fEnd = (folio.equals("cont") ? line[8+offset] : null);
+				String aStart = siline[3+offset];
+				String iStart = siline[4+offset];
+				String aEnd = siline[5+offset];
+				String iEnd = siline[6+offset];
+				String fStart = (folio.equals("cont") ? siline[7+offset] : null);
+				String fEnd = (folio.equals("cont") ? siline[8+offset] : null);
 
-				writeTextNode(title, volume, aStart, iStart, aEnd, iEnd, folio, fStart, fEnd, line);
+				writeTextNode(title, volume, aStart, iStart, aEnd, iEnd, folio, fStart, fEnd, siline);
 
 				firstTime = false;
 				lineNum += 1;
-				line = reader.readNext();
 			}
 		}
 
