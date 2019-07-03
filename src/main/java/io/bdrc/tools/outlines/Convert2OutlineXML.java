@@ -62,6 +62,7 @@ public class Convert2OutlineXML {
 	static Map<String, String> rids2names = new HashMap<>();
 	
 	private static String getName(String rid) {
+		rid = rid.trim();
 	    String name = rids2names.get(rid);
         
 	    if (name == null) {
@@ -171,6 +172,15 @@ public class Convert2OutlineXML {
 	
 	static String[] noStrs = new String[] { };
 	
+	static final Map<Character, String> prefixToSubjectType = new HashMap<>();
+	static {
+		prefixToSubjectType.put('P', "isAboutPerson");
+		prefixToSubjectType.put('C', "isAboutCorporation");
+		prefixToSubjectType.put('G', "isAboutPlace");
+		prefixToSubjectType.put('T', "isAboutUncontrolled");
+		prefixToSubjectType.put('W', "isAboutText");
+	}
+	
 	private static void writeExtended(String[] fields) {
 	    int len = fields.length;
 	    String[] authors = len > 7 ? fields[7].split(",") : noStrs;
@@ -180,14 +190,16 @@ public class Convert2OutlineXML {
 	    for (String auth : authors) {
 	        if (!auth.isEmpty()) {
 	            sb.append("      <o:creator person='");
-	            sb.append(auth);
+	            sb.append(auth.trim());
 	            sb.append("'>"+getName(auth)+"</o:creator>\r");
 	        }
 	    }
 	    
 	    for (String subj : subjects) {
 	        if (!subj.isEmpty()) {
-                sb.append("      <o:subject type='isAboutUncontrolled' class='");
+	        	subj = subj.trim();
+	        	String subjectType = prefixToSubjectType.getOrDefault(subj.charAt(0), "isAboutUncontrolled");
+                sb.append("      <o:subject type='"+subjectType+"' class='");
                 sb.append(subj);
                 sb.append("'>"+getName(subj)+"</o:subject>\r");
 	        }
@@ -195,7 +207,7 @@ public class Convert2OutlineXML {
 	    
 	    if (!note.isEmpty()) {
 	        sb.append("      <o:note>");
-	        sb.append(note);
+	        sb.append(note.trim());
 	        sb.append("</o:note>\r");
 	    }
 	}
