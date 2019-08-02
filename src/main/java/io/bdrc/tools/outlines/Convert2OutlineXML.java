@@ -328,7 +328,7 @@ public class Convert2OutlineXML {
 	}
 
 	private static void process(InputStream inputStream, String type, String folio, String who, String authorshipNote) throws IOException {
-        final BufferedReader in = new BufferedReader(new InputStreamReader(inputStream));
+        final BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
         final CSVReader reader;
         final CSVParser parser = new CSVParserBuilder().build();
         reader = new CSVReaderBuilder(in)
