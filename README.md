@@ -11,11 +11,11 @@ mvn clean package
 ### Running
 For help:
 ```
-java -jar target/convert-2-outline-xml-1.7.1.jar -help
+java -jar target/convert-2-outline-xml-1.8.3.jar -help
 ```
 Simple run with a single input file:
 ```
-java -jar target/convert-2-outline-xml-1.7.1.jar \
+java -jar target/convert-2-outline-xml-1.8.3.jar \
      -doc /path/Outline-W8LS32723.csv -outdir /outPath \
      -who CodeFerret
 ```
@@ -29,7 +29,7 @@ The sample file, ```Outline-W8LS32723.csv```, is located in the `resources` dire
 Since version 1.7.0 there is now support for extended csv files that include optional comma separated lists of 
 authors and subjects and a note and finally on the first row after headers the Work title in the final column:
 ```
-java -jar target/convert-2-outline-xml-1.7.1.jar \
+java -jar target/convert-2-outline-xml-1.8.3.jar \
      -doc /path/Outline-W8LS32723.csv -outdir /outPath \
      -who CodeFerret -extended
 ```
