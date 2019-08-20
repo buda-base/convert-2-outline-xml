@@ -3,7 +3,7 @@ This is a port of a tool for converting csv Outline files to a tbrc.org Outline 
 
 ### Download
 
-(convert-2-outline-xml-1.8.3)[https://github.com/buda-base/convert-2-outline-xml/releases/download/v1.8.3/convert-2-outline-xml-1.8.3.jar]
+[convert-2-outline-xml-1.8.3](https://github.com/buda-base/convert-2-outline-xml/releases/download/v1.8.3/convert-2-outline-xml-1.8.3.jar)
 
 ### Building
 mvn clean package
