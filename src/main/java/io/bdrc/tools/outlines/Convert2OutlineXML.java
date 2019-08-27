@@ -123,9 +123,6 @@ public class Convert2OutlineXML {
 	}
 
 	private static void writeCloseOutline(String who) {
-		// close the last volume node
-		sb.append("  </o:node>\r");
-		
 		// write audit log
 		sb.append("  <o:log>\r");
 
@@ -417,7 +414,9 @@ public class Convert2OutlineXML {
 				lineNum += 1;
 			}
 		}
-
+		if (hasMultipleVolumes) {
+			writeCloseVolume();
+		}
 		writeCloseOutline(who);
 	}
 
