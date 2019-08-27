@@ -110,7 +110,7 @@ public class Convert2OutlineXML {
 		
 		sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r");
 		sb.append("<o:outline xmlns:o='http://www.tbrc.org/models/outline#'");
-		sb.append(" RID='"); sb.append(oRid); sb.append("' status='provisional' pagination='absolute'>\r");
+		sb.append(" RID='"); sb.append(oRid); sb.append("' status='released' pagination='absolute'>\r");
 
 		sb.append("  <o:name lang='tibetan' encoding='extendedWylie'>"); sb.append(title); sb.append("</o:name>\r");
 		
